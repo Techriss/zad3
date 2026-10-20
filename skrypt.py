@@ -3,9 +3,9 @@ import sys
 from pathlib import Path
 
 from paths import (
-    DNI_SKRÓT,
-    MIESIĄCE,
-    PORY_SKRÓT,
+    DAYS_ABB,
+    MONTHS,
+    TIMES_ABB,
     build_paths,
     create_files,
     expand_day_range,
@@ -19,7 +19,7 @@ def build_parser():
                     python skrypt.py -m styczeń luty -d pn-wt pt -p r w -t -c
                     python skrypt.py -m styczeń luty -d pn-wt pt -o -c -j --root ./dane'''
         ,
-        formatter_class=argparse.RawDescriptionHelpFormatter
+        formatter_class=argparse.RawDescriptionHelpFormatter # umożliwia m.in. zapis opisów na wiele linii
     )
 
     req_group = parser.add_argument_group('argumenty wymagane')
@@ -27,34 +27,34 @@ def build_parser():
         '-m', 
         '--miesiące',
         nargs='+',
-        dest='miesiące',
+        dest='months',
         required=True,
-        type=str.lower,
-        help=f'Miesiące oddzielone spacjami, dozwolone wartości: {", ".join(MIESIĄCE)}'
+        type=str.lower, # automatyczna normalizacja argumentów 
+        help=f'Miesiące oddzielone spacjami, dozwolone wartości: {", ".join(MONTHS)}'
     )
 
     req_group.add_argument(
         '-d',
         '--dni',
         nargs='+', 
-        dest='dni', 
+        dest='days', 
         required=True, 
         type=str.lower,
-        help=f'Dni lub zakresy dni oddzielone spacjami dla każdego miesiąca, np. wt pn-cz sb-nd, dozwolone wartości: {", ".join(DNI_SKRÓT.keys())}, {", ".join(DNI_SKRÓT.values())}'
+        help=f'Dni lub zakresy dni oddzielone spacjami dla każdego miesiąca, np. wt pn-cz sb-nd, dozwolone wartości: {", ".join(DAYS_ABB.keys())}, {", ".join(DAYS_ABB.values())}'
     )
 
     mode_group = parser.add_argument_group('tryb działania (wymagany jeden z dwóch)')
-    mode_mutex = mode_group.add_mutually_exclusive_group(required=True)
+    mode_mutex = mode_group.add_mutually_exclusive_group(required=True) # umożliwia wybór tylko jednego argumentu z grupy
     mode_mutex.add_argument(
         '-t', 
         action='store_true', 
-        dest='tworzenie', 
+        dest='create', 
         help='Tryb tworzenia struktury katalogów i plików z danymi'
     )
     mode_mutex.add_argument(
         '-o', 
         action='store_true', 
-        dest='odczyt', 
+        dest='view', 
         help='Tryb odczytu danych'
     )
 
@@ -63,10 +63,10 @@ def build_parser():
         '-p', 
         '--pory',
         nargs='*', 
-        dest='pory', 
+        dest='times', 
         required=False, 
         type=str.lower, 
-        help=f'Pory dnia dla każdego dnia każdego miesiąca oddzielone spacjami, dozwolone wartości: {", ".join(PORY_SKRÓT.keys())}, {", ".join(PORY_SKRÓT.values())}', 
+        help=f'Pory dnia dla każdego dnia każdego miesiąca oddzielone spacjami, dozwolone wartości: {", ".join(TIMES_ABB.keys())}, {", ".join(TIMES_ABB.values())}', 
         default=[]
     )
 
@@ -102,40 +102,40 @@ def build_parser():
     return parser
 
 def validate_args(parser, args):
-    if (len(args.miesiące) != len(args.dni)):
+    if (len(args.months) != len(args.days)):
         parser.error('liczba miesięcy musi być równa liczbie zakresów dni')
 
-    for m in args.miesiące:
-        if  m not in MIESIĄCE:
-            parser.error(f'nieprawidłowy miesiąc: {m}, dozwolone {", ".join(MIESIĄCE)}')
+    for m in args.months:
+        if  m not in MONTHS:
+            parser.error(f'nieprawidłowy miesiąc: {m}, dozwolone {", ".join(MONTHS)}')
 
     total_days = 0
-    valid_days = set(DNI_SKRÓT.keys()) | set(DNI_SKRÓT.values())
+    valid_days = set(DAYS_ABB.keys()) | set(DAYS_ABB.values()) # suma zbiorów
 
-    for d in args.dni:
+    for d in args.days:
         parts = d.split('-')
         if not(1 <= len(parts) <= 2):
             parser.error(f'niepoprawny zakres dni: {d}')
 
         for p in parts:
             if p not in valid_days:
-                parser.error(f'niepoprawny dzień: {p}, dozwolone {", ".join(DNI_SKRÓT.keys())}, {", ".join(DNI_SKRÓT.values())}')
+                parser.error(f'niepoprawny dzień: {p}, dozwolone {", ".join(DAYS_ABB.keys())}, {", ".join(DAYS_ABB.values())}')
 
         total_days += len(expand_day_range(d))
 
-    valid_times = set(PORY_SKRÓT.keys()) | set(PORY_SKRÓT.values())
+    valid_times = set(TIMES_ABB.keys()) | set(TIMES_ABB.values())
     normalized_times = []
 
-    for t in args.pory:
+    for t in args.times:
         if t not in valid_times:
-            parser.error(f'niepoprawna pora {t}, dozwolone {", ".join(PORY_SKRÓT.keys())}, {", ".join(PORY_SKRÓT.values())}')
+            parser.error(f'niepoprawna pora {t}, dozwolone {", ".join(TIMES_ABB.keys())}, {", ".join(TIMES_ABB.values())}')
 
-        normalized_times.append(PORY_SKRÓT.get(t, t))
+        normalized_times.append(TIMES_ABB.get(t, t))
 
-    args.pory = normalized_times
+    args.times = normalized_times
 
-    if (len(args.pory) > total_days):
-        parser.error(f'za dużo pór dnia ({len(args.pory)}) w stosunku do liczby dni ({total_days})')
+    if (len(args.times) > total_days):
+        parser.error(f'za dużo pór dnia ({len(args.times)}) w stosunku do liczby dni ({total_days})')
 
 def get_formats(args):
     formats = []
@@ -153,11 +153,11 @@ def main():
     validate_args(parser, args)
     formats = get_formats(args)
 
-    rel_paths = build_paths(args.miesiące, args.dni, args.pory)
-    abs_paths = [args.root / p for p in rel_paths]
+    rel_paths = build_paths(args.months, args.days, args.times)
+    abs_paths = [args.root / p for p in rel_paths] # skrótowy zapis tworzenia listy
 
     try:
-        if args.tworzenie:
+        if args.create:
             create_files(abs_paths, formats, args.force)
         else:
             read_files(abs_paths, formats)
@@ -165,6 +165,5 @@ def main():
         print(f'błąd podczas wykonywania operacji: {e}', file=sys.stderr)
         sys.exit(1)
 
-        
 if __name__ == '__main__':
     main()

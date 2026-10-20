@@ -2,7 +2,7 @@ from pathlib import Path
 from csv_io import read_csv, write_csv
 from json_io import read_json, write_json
 
-DNI_SKRÓT = {
+DAYS_ABB = {
     "pn": "poniedziałek",
     "wt": "wtorek",
     "śr": "środa",
@@ -12,9 +12,9 @@ DNI_SKRÓT = {
     "nd": "niedziela"
 }
 
-DNI = list(DNI_SKRÓT.values())
+DAYS = list(DAYS_ABB.values())
 
-MIESIĄCE = [
+MONTHS = [
     "styczeń", 
     "luty", 
     "marzec", 
@@ -29,30 +29,31 @@ MIESIĄCE = [
     "grudzień"
 ]
 
-PORY_SKRÓT = {
+TIMES_ABB = {
     "r": "rano",
     "w": "wieczór"
 }
 
-CSV_NAZWA = "Dane.csv"
-JSON_NAZWA = "Dane.json"
+CSV_NAME = "Dane.csv"
+JSON_NAME = "Dane.json"
 
 def normalize_day(day_str):
-    return DNI_SKRÓT.get(day_str, day_str)
+    return DAYS_ABB.get(day_str, day_str)
 
 def expand_day_range(day_range):
-    parts = day_range.split("-")
+    parts = day_range.split('-')
     if len(parts) == 1:
         return [normalize_day(parts[0])]
 
     start_day = normalize_day(parts[0])
     end_day = normalize_day(parts[1])
 
-    start_idx = DNI.index(start_day)
-    end_idx = DNI.index(end_day)
+    start_idx = DAYS.index(start_day)
+    end_idx = DAYS.index(end_day)
 
+    # umożliwienie zawijanych przedziałów dni
     count = (end_idx - start_idx) % 7 + 1
-    return [DNI[(start_idx + i) % 7] for i in range(count)]
+    return [DAYS[(start_idx + i) % 7] for i in range(count)] # skrótowy zapis tworzenia listy
 
 def build_paths(months, day_ranges, times):
     ### FIXME
