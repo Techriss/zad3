@@ -14,12 +14,28 @@ from paths import (
 
 def build_parser():
     parser = argparse.ArgumentParser(
-        description='Skrypt do tworzenia i odczytu danych (CSV/JSON) w strukturze katalogów: miesiąc / dzień_tygodnia / pora_dnia.',
-        epilog='''Przykład użycia:
-                    python skrypt.py -m styczeń luty -d pn-wt pt -p r w -t -c
-                    python skrypt.py -m styczeń luty -d pn-wt pt -o -c -j --root ./dane'''
-        ,
-        formatter_class=argparse.RawDescriptionHelpFormatter # umożliwia m.in. zapis opisów na wiele linii
+        description=(
+            "Skrypt do tworzenia i odczytu plików z danymi (Dane.csv, Dane.json)\n"
+            "w strukturze katalogów: <root> / miesiąc / dzień_tygodnia / pora_dnia.\n\n"
+            "Zasady działania:\n"
+            "  - Miesiące (-m) i zakresy dni (-d) są łączone parami po pozycji (1. z 1., 2. z 2. itd.).\n"
+            "    Aby podać kilka zakresów dla jednego miesiąca, powtórz ten miesiąc na liście -m.\n"
+            "  - Zakresy dni mogą przechodzić przez weekend (np. pt-pn oznacza: pt, sb, nd, pn).\n"
+            "  - Pory dnia (-p) przypisywane są kolejno do dni po rozwinięciu zakresów.\n"
+            "    Brakujące pory otrzymują domyślnie wartość 'rano'. Nadmiar pór powoduje błąd.\n"
+            "  - W trybie tworzenia (-t) istniejące pliki są domyślnie pomijane (użyj --force, by nadpisać).\n"
+            "  - W trybie odczytu (-o) program wypisuje sumę kolumny 'Czas' dla wierszy z Model == 'A'\n"
+            "    (osobno dla każdego pliku oraz sumę łączną). Brak pliku przerywa program z kodem 1."
+        ),
+        epilog=(
+            "Przykłady:\n"
+            "  # Utworzenie plików Dane.csv i Dane.json w katalogu ./dane:\n"
+            "  python skrypt.py -m styczeń luty -d pn-wt pt -p r w -t -c -j --root ./dane\n\n"
+            "  # Odczyt utworzonych plików CSV i JSON z katalogu ./dane:\n"
+            "  python skrypt.py -m styczeń luty -d pn-wt pt -p r w -o -c -j --root ./dane"
+        ),
+        # Zachowuje podział na linie w description oraz epilog
+        formatter_class=argparse.RawDescriptionHelpFormatter
     )
 
     req_group = parser.add_argument_group('argumenty wymagane')
@@ -28,34 +44,45 @@ def build_parser():
         '--miesiące',
         nargs='+',
         dest='months',
+        metavar='MIESIĄC',
         required=True,
         type=str.lower, # automatyczna normalizacja argumentów 
-        help=f'Miesiące oddzielone spacjami, dozwolone wartości: {", ".join(MONTHS)}'
+        help=(
+            f"Lista miesięcy (tyle samo co zakresów dni w -d). "
+            f"Dozwolone: {', '.join(MONTHS)}"
+        )
     )
 
     req_group.add_argument(
         '-d',
         '--dni',
         nargs='+', 
-        dest='days', 
+        dest='days',
+        metavar='ZAKRES',
         required=True, 
         type=str.lower,
-        help=f'Dni lub zakresy dni oddzielone spacjami dla każdego miesiąca, np. wt pn-cz sb-nd, dozwolone wartości: {", ".join(DAYS_ABB.keys())}, {", ".join(DAYS_ABB.values())}'
+        help=(
+            "Pojedyncze dni lub zakresy dni (np. pt, pn-cz, pt-pn) odpowiadające kolejnym miesiącom. "
+            f"Dozwolone skróty: {', '.join(DAYS_ABB.keys())} (lub pełne nazwy dni)"
+        )
     )
 
-    mode_group = parser.add_argument_group('tryb działania (wymagany jeden z dwóch)')
-    mode_mutex = mode_group.add_mutually_exclusive_group(required=True) # umożliwia wybór tylko jednego argumentu z grupy
+    mode_group = parser.add_argument_group('tryb działania (wymagany dokładnie jeden z dwóch)')
+    # Wykluczające się flagi wymuszają świadomy wybór dokładnie jednego trybu
+    mode_mutex = mode_group.add_mutually_exclusive_group(required=True)
     mode_mutex.add_argument(
         '-t', 
+        '--tworzenie',
         action='store_true', 
         dest='create', 
-        help='Tryb tworzenia struktury katalogów i plików z danymi'
+        help='Tworzenie struktury katalogów i plików z losowymi danymi'
     )
     mode_mutex.add_argument(
         '-o', 
+        '--odczyt',
         action='store_true', 
-        dest='view', 
-        help='Tryb odczytu danych'
+        dest='read', 
+        help='Odczyt plików i sumowanie wartości "Czas" dla Model == "A"'
     )
 
     opt_group = parser.add_argument_group('argumenty opcjonalne')
@@ -64,9 +91,13 @@ def build_parser():
         '--pory',
         nargs='*', 
         dest='times', 
-        required=False, 
+        metavar='PORA',
         type=str.lower, 
-        help=f'Pory dnia dla każdego dnia każdego miesiąca oddzielone spacjami, dozwolone wartości: {", ".join(TIMES_ABB.keys())}, {", ".join(TIMES_ABB.values())}', 
+        help=(
+            "Pory dnia przypisywane kolejno do wygenerowanych dni. "
+            "Brakujące przyjmują wartość 'rano' (nadmiar powoduje błąd). "
+            f"Dozwolone: {', '.join(TIMES_ABB.keys())}, {', '.join(TIMES_ABB.values())}"
+        ), 
         default=[]
     )
 
@@ -75,53 +106,65 @@ def build_parser():
         default=Path('.'), 
         dest='root', 
         type=Path,
-        help='Katalog docelowy do tworzenia struktury katalogów, domyślnie katalog bieżący', 
+        metavar='KATALOG',
+        help='Katalog bazowy struktury (dla tworzenia i odczytu), domyślnie bieżący (".")', 
     )
 
     opt_group.add_argument(
         '--force', 
         action='store_true',
         dest='force', 
-        help='Flaga wymuszająca nadpisanie istniejących plików'
+        help='Wymuś nadpisanie istniejących plików (działa tylko w trybie tworzenia -t)'
     )
 
     opt_group.add_argument(
         '-j', 
+        '--json',
         action='store_true', 
         dest='json', 
-        help='Twórz pliki JSON'
+        help='Obsługa formatu JSON (Dane.json); można łączyć z -c'
     )
 
     opt_group.add_argument(
         '-c', 
+        '--csv',
         action='store_true',
         dest='csv', 
-        help='Twórz pliki CSV, domyślny format'
+        help='Obsługa formatu CSV (Dane.csv). Domyślny format, gdy nie podano -c ani -j; można łączyć z -j'
     )
 
     return parser
 
-def validate_args(parser, args):
-    if (len(args.months) != len(args.days)):
+def validate_and_normalize_args(parser, args):
+    if len(args.months) != len(args.days):
         parser.error('liczba miesięcy musi być równa liczbie zakresów dni')
 
+    if args.force and not args.create:
+        parser.error("flaga --force może być używana tylko w trybie tworzenia (-t)")
+
     for m in args.months:
-        if  m not in MONTHS:
+        if m not in MONTHS:
             parser.error(f'nieprawidłowy miesiąc: {m}, dozwolone {", ".join(MONTHS)}')
 
     total_days = 0
-    valid_days = set(DAYS_ABB.keys()) | set(DAYS_ABB.values()) # suma zbiorów
+    # Akceptujemy zarówno skróty (pn..nd), jak i pełne nazwy dni tygodnia
+    valid_days = set(DAYS_ABB.keys()) | set(DAYS_ABB.values())
+    normalized_days = []
 
     for d in args.days:
         parts = d.split('-')
-        if not(1 <= len(parts) <= 2):
+        if not (1 <= len(parts) <= 2):
             parser.error(f'niepoprawny zakres dni: {d}')
 
         for p in parts:
             if p not in valid_days:
                 parser.error(f'niepoprawny dzień: {p}, dozwolone {", ".join(DAYS_ABB.keys())}, {", ".join(DAYS_ABB.values())}')
 
+        # Po walidacji zamieniamy np. ['pn', 'wt'] -> 'poniedziałek-wtorek'
+        normalized_days.append('-'.join(DAYS_ABB.get(p, p) for p in parts))
         total_days += len(expand_day_range(d))
+
+    args.days = normalized_days
 
     valid_times = set(TIMES_ABB.keys()) | set(TIMES_ABB.values())
     normalized_times = []
@@ -130,11 +173,12 @@ def validate_args(parser, args):
         if t not in valid_times:
             parser.error(f'niepoprawna pora {t}, dozwolone {", ".join(TIMES_ABB.keys())}, {", ".join(TIMES_ABB.values())}')
 
+        # Zamiana skrótów 'r'/'w' na pełne nazwy katalogów 'rano'/'wieczór' (decyzja #8)
         normalized_times.append(TIMES_ABB.get(t, t))
 
     args.times = normalized_times
 
-    if (len(args.times) > total_days):
+    if len(args.times) > total_days:
         parser.error(f'za dużo pór dnia ({len(args.times)}) w stosunku do liczby dni ({total_days})')
 
 def get_formats(args):
@@ -150,17 +194,20 @@ def get_formats(args):
 def main():
     parser = build_parser()
     args = parser.parse_args()
-    validate_args(parser, args)
+    validate_and_normalize_args(parser, args)
     formats = get_formats(args)
 
-    rel_paths = build_paths(args.months, args.days, args.times)
-    abs_paths = [args.root / p for p in rel_paths] # skrótowy zapis tworzenia listy
-
+    # Błędy I/O (np. brak pliku przy odczycie) oraz błędy walidacji danych (ValueError)
+    # są obsługiwane centralnie i kończą program z kodem wyjścia 1
     try:
+        rel_paths = build_paths(args.months, args.days, args.times)
+        # build_paths zwraca ścieżki względne poziomu 3 – doklejamy katalog bazowy --root
+        full_paths = [args.root / p for p in rel_paths]
+        
         if args.create:
-            create_files(abs_paths, formats, args.force)
+            create_files(full_paths, formats, args.force)
         else:
-            read_files(abs_paths, formats)
+            read_files(full_paths, formats)
     except (OSError, ValueError) as e:
         print(f'błąd podczas wykonywania operacji: {e}', file=sys.stderr)
         sys.exit(1)
