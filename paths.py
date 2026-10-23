@@ -53,7 +53,7 @@ def expand_day_range(day_range):
 
     # umożliwienie zawijanych przedziałów dni
     count = (end_idx - start_idx) % 7 + 1
-    return [DAYS[(start_idx + i) % 7] for i in range(count)] # skrótowy zapis tworzenia listy
+    return [DAYS[(start_idx + i) % 7] for i in range(count)]
 
 def build_paths(months, day_ranges, times):
     ### FIXME

@@ -7,7 +7,7 @@ Każda osoba pracuje wyłącznie nad swoim plikiem (`paths.py` dla Osoby 2, `csv
 Otwórz terminal w folderze, gdzie trzymasz projekty, i wpisz:
 
 ```bash
-git clone <URL_TWOJEGO_REPOZYTORIUM>
+git clone https://github.com/Techriss/zad3.git
 cd <NAZWA_KATALOGU_REPOZYTORIUM>
 
 ```
