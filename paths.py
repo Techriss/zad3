@@ -55,14 +55,98 @@ def expand_day_range(day_range):
     count = (end_idx - start_idx) % 7 + 1
     return [DAYS[(start_idx + i) % 7] for i in range(count)]
 
-def build_paths(months, day_ranges, times):
-    ### FIXME
-    raise NotImplementedError()
+
+
+
+# przeczytaj notatki, dodaj komentarze i sprawdz czy rzucasz wyjatki (mozna je troche ulepszyc)
+def build_paths(months, day_ranges, times) -> list[Path]:
+    """
+    Tworzy listę unikalnych ścieżek składających się z miesiąca, dnia i jego pory, 
+    podanych funkcji.
+    """
+
+    if  len(months) != len(day_ranges):
+        raise ValueError(f"Liczba miesięcy: {len(months)} nie jest zgodna" \
+        " z liczbą zakresów dni: {len(day_ranges)}, ")
+
+    time_idx = 0
+    paths = []
+
+    for month, day_range in zip(months, day_ranges) :
+
+        days = expand_day_range(day_range)
+
+        for day in days:
+
+            if time_idx < len(times):
+                time = times[time_idx]
+            
+            else: 
+                time = "rano"
+
+            time_norm = TIMES_ABB.get(time, time)
+            time_idx = time_idx + 1
+            path = Path(month) / day / time_norm
+
+            if path not in paths:
+                paths.append(path)
+
+    if time_idx < len(times):
+        raise ValueError(f"Podano zbyt wiele pór dnia")
+    
+    return paths
 
 def create_files(paths, formats, force = False):
-    ### FIXME
-    raise NotImplementedError()
+    """
+    Zleca zapis danych do podanych ścieżek paths o danych formatach formats, 
+    jeśli flaga force = true, nadpisujemy istniejące dane.
+    """
 
-def read_files(paths, formats):
-    ### FIXME
-    raise NotImplementedError()
+    for path in paths:
+        for fmt in formats:
+
+            if fmt == "csv":
+                file_path = path / CSV_NAME
+
+                if not file_path.exists() or force:
+                    path.mkdir(parents = True, exist_ok = True)
+                    write_csv(file_path)
+
+            elif fmt == "json":
+                file_path = path / JSON_NAME
+
+                if not file_path.exists() or force:
+                    path.mkdir(parents = True, exist_ok = True)
+                    write_json(file_path)
+            else:
+                raise ValueError(f"Podano nieobsługiwany typ pliku: {fmt}")
+
+def read_files(paths, formats) -> int:
+    """
+        Zleca odczyt danych z podanych ścieżek paths o danych formatach formats.
+
+        Wypisuje sumy poszczególnych danych i na końcu sumę całkowitą  
+    """
+
+    total_sum = 0
+    
+    for path in paths:
+        for fmt in formats:
+    
+            if fmt == "csv":
+                file_path = path / CSV_NAME
+                result = read_csv(file_path)
+                print(f"Plik {file_path}: suma {result}")
+                total_sum += result
+    
+            elif fmt == "json":
+                file_path = path / JSON_NAME
+                result = read_json(file_path)
+                print(f"Plik {file_path}: suma {result}")
+                total_sum += result
+    
+            else:
+                raise ValueError(f"Podano nieobsługiwany typ pliku: {fmt}")
+    
+    print(f"Suma całkowita: {total_sum}")
+    return total_sum
