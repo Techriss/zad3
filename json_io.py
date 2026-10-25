@@ -25,10 +25,15 @@ def write_json(path: Path) -> None:
 
 
 def read_json(path: Path) -> int:
-    # Brak pliku i uszkodzony json celowo nie są tu obsługiwane: wyjątki
-    # przechodzą do main w skrypt.py, który wypisuje komunikat i kończy program
+    # Brak pliku celowo nie jest tu obsługiwany: wyjątek przechodzi do main
+    # w skrypt.py, który wypisuje komunikat i kończy program
     with path.open("r", encoding="utf-8") as f:
-        data = json.load(f)
+        try:
+            data = json.load(f)
+        except json.JSONDecodeError as e:
+            # komunikat json.load nie zawiera nazwy pliku, więc ją dokładamy;
+            # ValueError nadal obsłuży main
+            raise ValueError(f"{path}: niepoprawny json: {e}") from None
 
     if not isinstance(data, dict):
         raise ValueError(f"{path}: to nie jest słownik")
@@ -43,6 +48,9 @@ def read_json(path: Path) -> int:
     # bool jest podklasą int, więc bez drugiego warunku "Czas": true przeszłoby
     if not isinstance(czas, int) or isinstance(czas, bool):
         raise ValueError(f"{path}: czas musi być liczbą całkowitą, a jest: {czas!r}")
+    # ujemny czas zmniejszałby sumę łączną
+    if czas < 0:
+        raise ValueError(f"{path}: czas nie może być ujemny, a jest: {czas}")
 
     model = data["Model"]
     # bez tego np. "Model": 5 po cichu dawałoby 0 zamiast błędu
