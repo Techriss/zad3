@@ -41,7 +41,7 @@ def read_csv(path: Path) -> int:
     if len(rows) != 2:
         raise ValueError(f"{path}: plik CSV musi zawierać dokładnie 2 wiersze")
 
-    # Walidacja nagłówka (; jest separatorem, więc trzeba usunąć puste słowo z końca linijki)
+    # Walidacja nagłówka i usunięcie pustych słów (; jest separatorem, więc trzeba usunąć puste słowo z końca linijki)
     header_raw = rows[0]
     header = []
     for item in header_raw:
@@ -53,7 +53,7 @@ def read_csv(path: Path) -> int:
     if header != expected_header:
         raise ValueError(f"{path}: niepoprawny nagłówek CSV, oczekiwano {expected_header}, a jest: {header}")
 
-    # Pobranie wiersza danych (; jest separatorem, więc trzeba usunąć puste słowo z końca linijki)
+    # Pobranie wiersza danych i usunięcie pustych słów (; jest separatorem, więc trzeba usunąć puste słowo z końca linijki)
     data_raw = rows[1]
     data = []
     for item in data_raw:
@@ -67,10 +67,6 @@ def read_csv(path: Path) -> int:
     model = data[0].strip()
     czas_raw = data[2].strip()
 
-    # Sprawdza czy model jest stringiem
-    if not isinstance(model, str):
-        raise ValueError(f"{path}: model musi być stringiem, a jest: {model!r}")
-
     # Czas w pliku CSV musi posiadać literę "s" na końcu (np. "465s")
     if not czas_raw.endswith("s"):
         raise ValueError(f"{path}: czas musi kończyć się literą 's', a jest: {czas_raw!r}")
@@ -79,10 +75,9 @@ def read_csv(path: Path) -> int:
     czas_str = czas_raw[:-1].strip()
 
     # Próba konwersji części liczbowej czasu na int
-    try:
-        czas = int(czas_str)
-    except ValueError:
-        raise ValueError(f"{path}: czas musi być liczbą całkowitą, a jest: {czas_raw!r}")
+    if not czas_str.isdigit():
+        raise ValueError(f"{path}: czas musi być nieujemną liczbą całkowitą, a jest: {czas_raw!r}")
+    czas = int(czas_str)
 
     if model == "A":
         return czas
