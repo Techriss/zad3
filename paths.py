@@ -61,18 +61,18 @@ def expand_day_range(day_range):
     return [DAYS[(start_idx + i) % 7] for i in range(count)]
 
 
-def build_paths(months, day_ranges, times) -> list[Path]:
+def build_paths(months, day_ranges, times):
     """
     Tworzy listę unikalnych ścieżek składających się z miesiąca, dnia i jego
-    pory, z list przekazanych funkcji. 
-    Zakłada, że argumenty są już sprawdzone przez skrypt.
+    pory, którą zwracamy bez 'root'.
+    Zakłada, że nazwy miesięcy, dni i pór dnia zostały sprawdzone przez skrypt.
+    sprawdza jedynie zgodność liczby argumentów.
     Pory przypisujemy po kolei, brakujące dostają "rano".
-    Ścieżki są bez 'root'.
     """
 
     if  len(months) != len(day_ranges):
         raise ValueError(f"Liczba miesięcy: {len(months)} nie jest zgodna "
-                         f" z liczbą zakresów dni: {len(day_ranges)}")
+                         f"z liczbą zakresów dni: {len(day_ranges)}")
 
     time_idx = 0
     paths = []
@@ -90,7 +90,7 @@ def build_paths(months, day_ranges, times) -> list[Path]:
                 time = "rano"
 
             time_norm = TIMES_ABB.get(time, time)
-            time_idx = time_idx + 1
+            time_idx += 1
             path = Path(month) / day / time_norm
 
             # duplikaty usuwamy dopiero po dodaniu pory, ponieważ wtorek/rano,
@@ -128,16 +128,16 @@ def create_files(paths, formats, force=False):
 
             # Katalog tworzymy tylko wtedy gdy zapisujemy plik,
             # unikamy pustych katalogów
-            elif not file_path.exists() or force:
-                path.mkdir(parents=True, exist_ok=True)
-                write(file_path)
+            path.mkdir(parents=True, exist_ok=True)
+            write(file_path)
 
 
-def read_files(paths, formats) -> int:
+def read_files(paths, formats):
     """
-        Zleca odczyt danych z podanych ścieżek paths o danych formatach formats.
-        Wypisuje sumy poszczególnych danych i na końcu sumę całkowitą.
-        Brak pliku przerywa odczyt, wyjątek łapiemy w 'main'
+    Zleca odczyt danych z podanych ścieżek paths o danych formatach formats.
+    Wypisuje sumy poszczególnych danych i na końcu sumę całkowitą.
+    Brak pliku przerywa odczyt, wyjątek łapiemy w 'main'
+    Zwracamy sumę całkowitą z plików
     """
 
     total_sum = 0
