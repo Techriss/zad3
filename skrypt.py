@@ -173,7 +173,7 @@ def validate_and_normalize_args(parser, args):
         if t not in valid_times:
             parser.error(f'niepoprawna pora {t}, dozwolone {", ".join(TIMES_ABB.keys())}, {", ".join(TIMES_ABB.values())}')
 
-        # Zamiana skrótów 'r'/'w' na pełne nazwy katalogów 'rano'/'wieczór' (decyzja #8)
+        # Zamiana skrótów 'r'/'w' na pełne nazwy katalogów 'rano'/'wieczór'
         normalized_times.append(TIMES_ABB.get(t, t))
 
     args.times = normalized_times
